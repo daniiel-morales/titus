@@ -1,8 +1,18 @@
+#▓█████▄  ▄▄▄       ███▄    █ ▒██░ ██░ ███▄ ▄███░ ▒█████   ██▀███  
+#▒██▀ ██▌▒████▄     ██ ▀█   █ ▒██▒▒██▒▓██▒▀█▀ ██▒▒██▒  ██▒▓██ ▒ ██▒
+#░██   █▌▒██  ▀█▄  ▓██  ▀█ ██▒▒██▒▒██▒▓██    ▓██░▒██░  ██▒▓██ ░▄█ ▒
+#░▓█▄   ▌░██▄▄▄▄██ ▓██▒  ▐▌██▒░██░░██░▒██    ▒██ ▒██   ██░▒██▀▀█▄  
+#░▒████▓  ▓█   ▓██▒▒██░   ▓██░░██░░██░▒██▒   ░██▒░ ████▓▒░░██▓ ▒██▒
+# ▒▒▓  ▒  ▒▒   ▓▒█░░ ▒░   ▒ ▒ ░▓  ░▓  ░ ▒░   ░  ░░ ▒░▒░▒░ ░ ▒▓ ░▒▓░
+# ░ ▒  ▒   ▒   ▒▒ ░░ ░░   ░ ▒░ ▒ ░ ▒ ░░  ░      ░  ░ ▒ ▒░   ░▒ ░ ▒░
+# ░ ░  ░   ░   ▒      ░   ░ ░  ▒ ░ ▒ ░░      ░   ░ ░ ░ ▒    ░░   ░ 
+#   ░          ░  ░         ░  ░   ░         ░       ░ ░     ░     
+                                                 
 from tkinter import Frame, Text, Scrollbar
 import tkinter.font as tkFont
 import re
 
-class CustomText(Frame):
+class TextArea(Frame):
 
     def __init__(self, *args, **kwargs):
         Frame.__init__(self, *args, **kwargs)
@@ -60,8 +70,11 @@ class CustomText(Frame):
     def highlighting(self, event):
         # lookup the last whitespace
         index = self.textarea.search(r'\s', "insert", backwards=True, regexp=True)
-        if index == "":
-            index ="0.0"
+        
+        # verify it is the first word
+        word = self.textarea.get(str(index), "insert")
+        if word == "":
+            index ="1.0"
         else:
             index = self.textarea.index("%s+1c" % index)
 

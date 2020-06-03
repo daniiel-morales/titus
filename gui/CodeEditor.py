@@ -1,7 +1,17 @@
+#▓█████▄  ▄▄▄       ███▄    █ ▒██░ ██░ ███▄ ▄███░ ▒█████   ██▀███  
+#▒██▀ ██▌▒████▄     ██ ▀█   █ ▒██▒▒██▒▓██▒▀█▀ ██▒▒██▒  ██▒▓██ ▒ ██▒
+#░██   █▌▒██  ▀█▄  ▓██  ▀█ ██▒▒██▒▒██▒▓██    ▓██░▒██░  ██▒▓██ ░▄█ ▒
+#░▓█▄   ▌░██▄▄▄▄██ ▓██▒  ▐▌██▒░██░░██░▒██    ▒██ ▒██   ██░▒██▀▀█▄  
+#░▒████▓  ▓█   ▓██▒▒██░   ▓██░░██░░██░▒██▒   ░██▒░ ████▓▒░░██▓ ▒██▒
+# ▒▒▓  ▒  ▒▒   ▓▒█░░ ▒░   ▒ ▒ ░▓  ░▓  ░ ▒░   ░  ░░ ▒░▒░▒░ ░ ▒▓ ░▒▓░
+# ░ ▒  ▒   ▒   ▒▒ ░░ ░░   ░ ▒░ ▒ ░ ▒ ░░  ░      ░  ░ ▒ ▒░   ░▒ ░ ▒░
+# ░ ░  ░   ░   ▒      ░   ░ ░  ▒ ░ ▒ ░░      ░   ░ ░ ░ ▒    ░░   ░ 
+#   ░          ░  ░         ░  ░   ░         ░       ░ ░     ░     
+                                                                
 import tkinter.font as tkFont
 from tkinter.ttk import Notebook
 from tkinter import Frame, Label, Menu, Message, Text, Scrollbar, Tk
-from EditorText import CustomText as Editor
+from TextArea import TextArea as Editor
 
 class App:
     def __init__(self, ide):
@@ -87,22 +97,36 @@ class App:
 
 
         # setting terminal area
-        terminal= Text(ide)
+        self.terminal= Text(ide)
         ft = tkFont.Font(family="Lucinda Console", size=10)
-        terminal["font"] = ft
-        terminal["fg"] = "#FFFFFF"
-        terminal["bg"] = "#333333"
-        terminal["height"] = 5
-        terminal["width"] = 5
-        terminal.pack( side = "left", fill = "both", expand=True,  padx=10, pady=10)
+        self.terminal["font"] = ft
+        self.terminal["wrap"] = "word"
+        self.terminal["fg"] = "white"
+        self.terminal["bg"] = "black"
+        self.terminal["insertbackground"] ="white"
+        self.terminal["height"] = 5
+        self.terminal["width"] = 5
+        self.terminal.pack( side = "left", fill = "both", expand=True,  padx=10, pady=10)
 
         terminal_scroll = Scrollbar(ide)
         terminal_scroll["orient"] = "vertical"
-        terminal_scroll["command"] = terminal.yview
+        terminal_scroll["command"] = self.terminal.yview
         terminal_scroll.pack(side="right", fill="y")
 
-        terminal.configure(yscrollcommand=terminal_scroll.set)
+        self.terminal.configure(yscrollcommand=terminal_scroll.set)
+        self.terminal.bind("<Return>", self.execute_command)
 
+    def execute_command(self, event):
+        # lookup the last line
+        index = self.terminal.search(r'\n', "insert", backwards=True, regexp=True)
+        input = self.terminal.get(str(index),'end-1c')
+        if input == "":
+            index ="1.0"
+        else:
+            index = self.terminal.index("%s+1c" % index)
+        input = self.terminal.get(index,'end-1c')
+        #TODO execute terminal command
+        print("terminal_code>>"+ str(input))
 
     def addTab(self, event):
         selectedTab = self.tabs.index("current")
