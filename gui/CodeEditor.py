@@ -47,7 +47,7 @@ class App:
         # edit menu
         editmenu = Menu(menubar, tearoff=0)
         editmenu.add_command(label="Cut", command=self.donothing)
-        editmenu.add_command(label="Copy", command=self.donothing)
+        editmenu.add_command(label="Copy", command=self.copy_to_clipboard)
         editmenu.add_command(label="Paste", command=self.donothing)
 
         editmenu.add_separator()
@@ -115,6 +115,15 @@ class App:
 
         self.terminal.configure(yscrollcommand=terminal_scroll.set)
         self.terminal.bind("<Return>", self.execute_command)
+
+    def copy_to_clipboard(self):
+        selectedTab = self.tabs.index("current")
+        currentTextArea = self.tabs.winfo_children()[selectedTab+1].textarea
+        try:
+            selected_text= currentTextArea.get("sel.first", "sel.last")
+            currentTextArea.clipboard_append(selected_text)
+        except:
+            pass
 
     def execute_command(self, event):
         # lookup the last line
