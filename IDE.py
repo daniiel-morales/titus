@@ -1,7 +1,6 @@
-import tkinter as tk
 import tkinter.font as tkFont
 from tkinter.ttk import Notebook
-from tkinter import Frame, Label, Menu, Message, Text, Scrollbar
+from tkinter import Frame, Label, Menu, Message, Text, Scrollbar, Tk
 from EditorText import CustomText as Editor
 
 class App:
@@ -82,7 +81,7 @@ class App:
         self.tabs = Notebook(ide)
         f1 = Frame(self.tabs)
         self.tabs.add(f1, text="+")
-        self.tabs.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=10, pady=0)
+        self.tabs.pack(side="top", fill="both", expand=True, padx=10, pady=0)
 
         self.tabs.bind("<<NotebookTabChanged>>", self.addTab)
 
@@ -95,12 +94,12 @@ class App:
         terminal["bg"] = "#333333"
         terminal["height"] = 5
         terminal["width"] = 5
-        terminal.pack( side = tk.LEFT, fill = tk.BOTH, expand=True,  padx=10, pady=10)
+        terminal.pack( side = "left", fill = "both", expand=True,  padx=10, pady=10)
 
         terminal_scroll = Scrollbar(ide)
         terminal_scroll["orient"] = "vertical"
         terminal_scroll["command"] = terminal.yview
-        terminal_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+        terminal_scroll.pack(side="right", fill="y")
 
         terminal.configure(yscrollcommand=terminal_scroll.set)
 
@@ -110,7 +109,7 @@ class App:
         lastindex = self.tabs.index("end")-1
 
         if selectedTab == lastindex :
-            textarea = Editor(self.tabs, height=5)
+            textarea = Editor(self.tabs)
             self.tabs.insert(lastindex, textarea, text="Tab" + str(lastindex+1))
             self.tabs.select(lastindex)
 
@@ -118,6 +117,6 @@ class App:
         print("clicked")
 
 if __name__ == "__main__":
-    ide = tk.Tk()
+    ide = Tk()
     app = App(ide)
     ide.mainloop()
