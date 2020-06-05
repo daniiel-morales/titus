@@ -8,10 +8,13 @@
 # ░ ░  ░   ░   ▒      ░   ░ ░  ▒ ░ ▒ ░░      ░   ░ ░ ░ ▒    ░░   ░ 
 #   ░          ░  ░         ░  ░   ░         ░       ░ ░     ░     
                                                                 
+# pylint: disable=import-error    
 import tkinter.font as tkFont
 from tkinter.ttk import Notebook
-from tkinter import Frame, Label, Menu, Message, Text, Scrollbar, Tk
-from TextArea import TextArea as Editor
+from tkinter import Frame, Label, Menu, Message, Text, Scrollbar
+from gui.TextArea import TextArea as Editor
+
+import analysis.bottom_up as left
 
 class App:
     def __init__(self, ide):
@@ -59,7 +62,7 @@ class App:
         # run menu
         runmenu = Menu(menubar, tearoff=0)
         runmenu.add_command(label="Top-Down Analysis", command=self.donothing)
-        runmenu.add_command(label="Bottom-Up Analysis", command=self.donothing)
+        runmenu.add_command(label="Bottom-Up Analysis", command=self.execute_current_tab_lef)
 
         runmenu.add_separator()
 
@@ -125,6 +128,20 @@ class App:
         except:
             pass
 
+    def execute_current_tab_lef(self):
+        selectedTab = self.tabs.index("current")
+        currentTextArea = self.tabs.winfo_children()[selectedTab+1].textarea
+        index = self.terminal.search(r'\n', "insert", backwards=True, regexp=True)
+        input = currentTextArea.get('1.0','end-1c')
+        ply_left = left.parse()
+        result  = ply_left(left, input)
+        if result:
+            self.terminal.insert(str(float(index)+1), result)
+        
+
+    # parser instance for terminal
+    ply_left = left.parse()
+    
     def execute_command(self, event):
         # lookup the last line
         index = self.terminal.search(r'\n', "insert", backwards=True, regexp=True)
@@ -134,8 +151,10 @@ class App:
         else:
             index = self.terminal.index("%s+1c" % index)
         input = self.terminal.get(index,'end-1c')
-        #TODO execute terminal command
-        print("terminal_code>>"+ str(input))
+        result  = self.ply_left(input)
+        if result:
+            self.terminal.insert(str(float(index)+1), "\n")
+            self.terminal.insert(str(float(index)+1), result)
 
     def addTab(self, event):
         selectedTab = self.tabs.index("current")
@@ -148,8 +167,3 @@ class App:
 
     def donothing(self):
         print("clicked")
-
-if __name__ == "__main__":
-    ide = Tk()
-    app = App(ide)
-    ide.mainloop()
