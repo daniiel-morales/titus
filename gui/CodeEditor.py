@@ -11,12 +11,17 @@
 # pylint: disable=import-error    
 import tkinter.font as tkFont
 from tkinter.ttk import Notebook
-from tkinter import Frame, Label, Menu, Message, Text, Scrollbar
+from tkinter import Frame, Label, Menu, Message, Text, Scrollbar, PhotoImage, Label
 from gui.TextArea import TextArea as Editor
-
+from gui.AstViewer import showAST
+from gui.TableViewer import showTable
 import analysis.bottom_up as left
 
 class App:
+    # need it for generate reports
+    __ast = None
+    __sym_table = None
+
     def __init__(self, ide):
 
         # setting title
@@ -66,8 +71,13 @@ class App:
 
         runmenu.add_separator()
 
-        runmenu.add_command(label="Sym Table", command=self.donothing)
+        runmenu.add_command(label="Symbol Table", command=self.show_sym_table)
         runmenu.add_command(label="Error Report", command=self.donothing)
+        runmenu.add_command(label="Abstract Syntax Tree", command=self.show_ast)
+        runmenu.add_command(label="Grammar", command=self.donothing)
+
+        runmenu.add_separator()
+        
         runmenu.add_command(label="Debugging", command=self.donothing)
 
 
@@ -128,16 +138,26 @@ class App:
         except:
             pass
 
+    def show_sym_table(self):
+        if self.__sym_table:
+            showTable(self.__sym_table)
+
+    def show_ast(self):
+        showAST()
+
     def execute_current_tab_lef(self):
         selectedTab = self.tabs.index("current")
         currentTextArea = self.tabs.winfo_children()[selectedTab+1].textarea
-        index = self.terminal.search(r'\n', "insert", backwards=True, regexp=True)
         input = currentTextArea.get('1.0','end-1c')
         ply_left = left.parse()
         result  = ply_left(left, input)
         if result:
-            self.terminal.insert(str(float(index)+1), result)
-        
+            self.__ast = result[0]
+            self.__ast.setType("LABEL")
+            self.__ast.setValue("S")
+            self.__ast.root = result[0]
+            self.__ast.graph()
+            self.__sym_table = result[1]
 
     # parser instance for terminal
     ply_left = left.parse()
