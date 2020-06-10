@@ -44,7 +44,10 @@ class node():
         "TOCHAR": 34,
         "ABS"   : 35,
         "ARRAY" : 36,
-        "ACCESS": 37
+        "ACCESS": 37,
+        "UNSET" : 38,
+        "EXIT"  : 39,
+        "READ"  : 40
 		}
 
     _value = None
@@ -62,7 +65,7 @@ class node():
 
         # dir for generated files
         dot_file = r'./dot/ast.dot'
-        png_file = r'./dot/ast.png'
+        png_file = r'./dot/ast.gif'
         
         if self.root != None:
             # dot generation
@@ -132,7 +135,7 @@ class node():
             y += 1
         
     def __build_png(self, ruta_dot, ruta_png):
-        tParam = "-Tpng"   
+        tParam = "-Tgif"   
         tOParam = "-o"        
         
         cmd = [
