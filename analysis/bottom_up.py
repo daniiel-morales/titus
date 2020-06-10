@@ -3,6 +3,7 @@ import ply.lex as lex
 import ply.yacc as yacc
 from syntax_tree.branch import branch as branch
 from syntax_tree.leaf import leaf as leaf
+from sym_table.table import table
 '''
 s -> code
 
@@ -24,7 +25,7 @@ term -> is_array_term
         | FLOAT 
 
 is_array_term -> is_array_term '[' term ']'
-	  	| NAME
+	  	| VAR
 
 expression -> term '+' term
             | term '-' term
@@ -77,7 +78,7 @@ def parse():
                 }
 
     tokens = [
-                'NAME',
+                'VAR',
                 'NUMBER',
                 'DECIMAL',
                 'LABEL'
@@ -87,7 +88,24 @@ def parse():
 
     t_ignore = " \t"
 
-    t_NAME = r'[$] ( [tavTAV][0-9]*| s(p|[0-9]*) | ra)'
+    def t_VAR(t):
+        r'[$] ( [tavTAV][0-9]*| s(p|[0-9]*) | ra)'
+        global sym_table
+        # add var to symbol table
+        if t.value[1] == 't':
+            sym_table.add(str(t.value), 'TEMPORAL', 0, None, sym_table.getScope())
+        elif t.value[1] == 'a':
+            sym_table.add(str(t.value), 'PARAMETER', 0, None, sym_table.getScope())
+        elif t.value[1] == 'v':
+            sym_table.add(str(t.value), 'RETURNEDVALUE', 0, None, sym_table.getScope())
+        elif t.value[1] == 'r':
+            sym_table.add(str(t.value), 'RETURNPOINTER', 0, None, sym_table.getScope())
+        elif t.value[1] == 's':
+            if t.value[2] == 'p':
+                sym_table.add(str(t.value), 'STACKPOINTER', 0, None, sym_table.getScope())
+            else:
+                sym_table.add(str(t.value), 'STACK', 0, None, sym_table.getScope())
+        return t
 
     t_ignore_COMMENT = r'[#].*'
 
@@ -103,9 +121,18 @@ def parse():
 
     def t_LABEL(t):
         r'[a-zA-Z_][a-zA-Z_0-9]*'
+        global sym_table
         # check if reserved word
         if t.value in reserved:
-            t.type = reserved.get(t.value)    
+            t.type = reserved.get(t.value)
+            if t.value == 'main':
+                # add MAIN label to symbol table
+                sym_table.add('MAIN', 'LABEL', 0, None, 'GLOBAL')
+                sym_table.setScope('MAIN')
+        else:
+            # add label to symbol table
+            sym_table.add(str(t.value), 'LABEL', 0, None, 'GLOBAL')
+            sym_table.setScope(str(t.value))
         return t
 
     def t_newline(t):
@@ -130,6 +157,12 @@ def parse():
         ('left', '*', '/'),
         ('right', 'UMINUS')
     )
+
+    def p_start(p):
+        'start : code'
+        global __ast
+        global sym_table
+        p[0] = [__ast, sym_table]
 
     def p_code(p):
         '''code : code LABEL ":" list
@@ -177,6 +210,28 @@ def parse():
         new_branch.add(leaf)
         new_branch.setType("PRINT")
 
+        p[0] = new_branch
+
+    def p_statement_group(p):
+        '''statement : IF '(' expression ')' GOTO LABEL
+                     | UNSET '(' term ')'
+                     | GOTO LABEL
+                     | EXIT                          '''
+        new_branch = branch()
+        if len(p) > 5:
+            new_branch.add(p[3])
+            r_leaf = leaf(p[6], "LABEL")
+            new_branch.add(r_leaf)
+            new_branch.setType("IF")
+        elif len(p) > 3:
+            new_branch.add(p[3])
+            new_branch.setType("UNSET")
+        elif len(p) > 2:
+            r_leaf = leaf(p[2], "LABEL")
+            new_branch.add(r_leaf)
+            new_branch.setType("GOTO")
+        else:
+            new_branch.setType("EXIT")
         p[0] = new_branch
 
     def p_expression_binop(p):
@@ -258,6 +313,7 @@ def parse():
             new_branch.setType("GE_OP")
         else:
             new_branch.setType("XOR")
+        p[0] = new_branch
 
     def p_expression(p):
         'expression : term '
@@ -278,6 +334,7 @@ def parse():
                 | '!' term
                 | ABS '(' term ')'
                 | ARRAY '(' ')'
+                | READ '(' ')'
                 | factor        
                                 '''
         new_branch = branch()
@@ -300,13 +357,15 @@ def parse():
             l_leaf = p[2]
             new_branch.add(l_leaf)
             new_branch.setType("NOT")
-        #TODO fix how to check this two cases
+        #TODO fix how to check this three cases
         elif p[1] == 'ABS':
             l_leaf = p[3]
             new_branch.add(l_leaf)
             new_branch.setType("ABS")
         elif p[1] == 'ARRAY':
             new_branch.setType("ARRAY")
+        elif p[1] == 'READ':
+            new_branch.setType("READ")
         ##
         else:
             new_branch = p[1]
@@ -325,7 +384,7 @@ def parse():
 
     def p_term_array(p):
         '''is_array_term : is_array_term '[' term ']'
-	  	                | NAME
+	  	                | VAR
                                                 '''
         if len(p) > 2:
             new_branch = branch()
@@ -359,8 +418,10 @@ def parse():
     def input(self, text):
         global __ast
         global __text
+        global sym_table
         __ast = branch()
         __text = text
+        sym_table = table()
         result = parser.parse(text, lexer=lexer)
         return result
 
