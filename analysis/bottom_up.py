@@ -296,7 +296,7 @@ def parse():
         new_branch.add(r_leaf)
 
         if p[2] == '&':
-            new_branch.setType("OR")
+            new_branch.setType("AND")
         elif p[2] == '|':
             new_branch.setType("OR")
         elif p[2] == '<' and p[3] == '<':
@@ -320,19 +320,26 @@ def parse():
         p[0] = p[1]
 
     def p_term_uminus(p):
-        "term : '-' number %prec UMINUS"
-        number = p[2].getValue()
-        p[2].setValue( number * -1)
-        p[0] = p[2]
+        "term : '-' factor %prec UMINUS"
+        l_leaf = p[2]
+        r_leaf = leaf(-1, "NUM")
+
+        new_branch = branch()
+        new_branch.add(l_leaf)
+        new_branch.add(r_leaf)
+        new_branch.setType("MUL")
+        
+        p[0] = new_branch
+
     
     def p_term_group(p):
-        '''term : '(' INT ')' term
-                | '(' FLOAT ')' term
-                | '(' CHAR ')' term
-                | '(' term ')'
-                | '~' term
-                | '!' term
-                | ABS '(' term ')'
+        '''term : '(' INT ')' factor
+                | '(' FLOAT ')' factor
+                | '(' CHAR ')' factor
+                | '(' factor ')'
+                | '~' factor
+                | '!' factor
+                | ABS '(' factor ')'
                 | ARRAY '(' ')'
                 | READ '(' ')'
                 | factor        
@@ -373,12 +380,12 @@ def parse():
         p[0] = new_branch
 
     def p_expression_number(p):
-        'number : NUMBER'
+        'factor : NUMBER'
         l_leaf = leaf(p[1], "NUM")
         p[0] = l_leaf
 
     def p_expression_decimal(p):
-        'number : DECIMAL'
+        'factor : DECIMAL'
         l_leaf = leaf(p[1], "FLOAT")
         p[0] = l_leaf
 
@@ -398,10 +405,6 @@ def parse():
 
     def p_factor_id(p):
         "factor : is_array_term"
-        p[0] = p[1]
-
-    def p_factor_number(p):
-        "factor : number"
         p[0] = p[1]
 
     def p_error(p):
