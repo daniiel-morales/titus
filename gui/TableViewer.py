@@ -21,13 +21,15 @@ def showTable(table):
     for key in table.printTable():
         #current_row = []
         ins = table.get(key)
-        typ = ["INT", "FLOAT", "STRING"]
+        typ = ["INT", "FLOAT", "STRING", "STRUCT"]
         is_label = ins.getType()
+        ref = ins.getRef()
         if type(is_label) == str:
             typ = is_label
+            ref = "ASTnode-" + ins.getID()
         else:
             typ = typ[is_label-1]
-        ins_tuple = [ins.getID(), typ, ins.getSize(), ins.getValue(), ins.getScope(), ins.getRef()]
+        ins_tuple = [ins.getID(), typ, ins.getSize(), ins.getValue(), ins.getScope(), ref]
         for column in range(6):
             label = Label(window, text="%s" % ins_tuple[column], 
                                 borderwidth=0, width=10, bg = "black", fg = "lightgrey")
