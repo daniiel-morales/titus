@@ -81,10 +81,11 @@ def parse():
                 'VAR',
                 'NUMBER',
                 'DECIMAL',
+                'STRING',
                 'LABEL'
             ] + list(reserved.values())
 
-    literals = ['=', '+', '-', '*', '/', '%', '&', '|', '^', '<', '>', '!', '~', '(', ')', '[', ']', ';', ':'] 
+    literals = ['=', '\'', '"', '+', '-', '*', '/', '%', '&', '|', '^', '<', '>', '!', '~', '(', ')', '[', ']', ';', ':'] 
 
     t_ignore = " \t"
 
@@ -108,6 +109,8 @@ def parse():
         return t
 
     t_ignore_COMMENT = r'[#].*'
+
+    t_STRING= r'(["].*["]|[\'].*[\'])'
 
     def t_NUMBER(t):
         r'\d+'
@@ -333,16 +336,15 @@ def parse():
 
     
     def p_term_group(p):
-        '''term : '(' INT ')' factor
-                | '(' FLOAT ')' factor
-                | '(' CHAR ')' factor
-                | '(' factor ')'
-                | '~' factor
-                | '!' factor
-                | ABS '(' factor ')'
-                | ARRAY '(' ')'
-                | READ '(' ')'
-                | factor        
+        '''expression : '(' INT ')' factor
+                    | '(' FLOAT ')' factor
+                    | '(' CHAR ')' factor
+                    | '(' factor ')'
+                    | '~' factor
+                    | '!' factor
+                    | ABS '(' factor ')'
+                    | ARRAY '(' ')'
+                    | READ '(' ')'           
                                 '''
         new_branch = branch()
         if p[1] == '(':
@@ -364,16 +366,14 @@ def parse():
             l_leaf = p[2]
             new_branch.add(l_leaf)
             new_branch.setType("NOT")
-        #TODO fix how to check this three cases
-        elif p[1] == 'ABS':
+        elif p[1] == 'abs':
             l_leaf = p[3]
             new_branch.add(l_leaf)
             new_branch.setType("ABS")
-        elif p[1] == 'ARRAY':
+        elif p[1] == 'array':
             new_branch.setType("ARRAY")
-        elif p[1] == 'READ':
+        elif p[1] == 'read':
             new_branch.setType("READ")
-        ##
         else:
             new_branch = p[1]
 
@@ -389,8 +389,15 @@ def parse():
         l_leaf = leaf(p[1], "FLOAT")
         p[0] = l_leaf
 
+    def p_expression_string(p):
+        'factor : STRING'
+        string = p[1].replace("'","")
+        string = string.replace("\"","")
+        l_leaf = leaf(string, "STRING")
+        p[0] = l_leaf
+
     def p_term_array(p):
-        '''is_array_term : is_array_term '[' term ']'
+        '''is_array_term : is_array_term '[' factor ']'
 	  	                | VAR
                                                 '''
         if len(p) > 2:
@@ -404,13 +411,30 @@ def parse():
             p[0] = l_leaf
 
     def p_factor_id(p):
-        "factor : is_array_term"
+        'factor : is_array_term'
+        p[0] = p[1]
+
+    def p_term_factor(p):
+        'term : factor'
         p[0] = p[1]
 
     def p_error(p):
         if p:
             global __text
             print("Syntax error at '" + str(p.value) + "', line:" + str(p.lineno) + ", column:" + str(find_column(__text, p)))
+            # Read ahead looking for a terminating ";"
+            tok =  p 
+            while True:
+                if not tok or tok.type == ';':
+                    tok =  parser.token()   
+                    break
+                else:
+                    # Get the next token
+                    tok =  parser.token()  
+            parser.errok()
+
+            # Return to the parser as the next lookahead token
+            return tok
         else:
             print("Syntax error at EOF")
 
