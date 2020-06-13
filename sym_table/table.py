@@ -22,7 +22,7 @@ class table:
     def add(self, identifier, typ, size, value, scope):
         if self.get(identifier) == None:
             # value for instance in __table diccionary
-            ins = sym(identifier, typ, size, value, scope, len(self.__table))
+            ins = sym(identifier, typ, size, value, scope, typ)
             
             # adds the instance in the table
             self.__table[identifier] = ins
@@ -51,7 +51,7 @@ class table:
         return self.__scope
 
     def appendLog(self, txt):
-        self.__log += 'titus>>' + txt + '\n'
+        self.__log += '>> ' + str(txt) + '\n'
     
     def getLog(self):
         return self.__log
