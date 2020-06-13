@@ -58,10 +58,21 @@ class branch(node):
                 self.TYPE["AND"] : operate.AND,
                 self.TYPE["OR"] : operate.OR,
                 self.TYPE["XOR"] : operate.XOR,
+                # COMPARE
+                self.TYPE["EQUAL"] : operate.EQUAL,
+                self.TYPE["NOEQUAL"] : operate.NOEQUAL,
+                self.TYPE["GTHAN"] : operate.GTHAN,
+                self.TYPE["GE_OP"] : operate.GE_OP,
+                self.TYPE["LTHAN"] : operate.LTHAN,
+                self.TYPE["LE_OP"] : operate.LE_OP,
+                # STRUCT
+                self.TYPE["ACCESS"] : operate.ACCESS,
 
+                self.TYPE["PRINT"] : operate.PRINT,
                 self.TYPE["ASSIGN"] : operate.ASSIGN
                 }
-        #TODO need to return semantic errors and print to terminal
+        #TODO need to return semantic errors
+        has_print = False
         for label in range(self.getSize()):
             label_node = self.getChild(label)
             if label_node.getType() == self.TYPE["LABEL"]:
@@ -69,8 +80,15 @@ class branch(node):
                     child_node = label_node.getChild(child)
                     func=switch.get(child_node.getType(),lambda :'Node not defined')
                     result = func(child_node, sym_table)
-                    if result != None:
-                        return result
+                    if child_node.getType() == self.TYPE["PRINT"]:
+                        has_print = True
+                    # save the ast node in reference for goto
+                    label_ref = sym_table.get(label_node.getValue())
+                    label_ref.setRef(label_node)
+                    sym_table.update(label_node.getValue(), label_ref)
             else:
                 func=switch.get(self.getType(),lambda :'Node not defined')
                 return func(self, sym_table)
+        if has_print:
+            return sym_table.getLog()
+        return None
