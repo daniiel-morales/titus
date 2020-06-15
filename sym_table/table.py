@@ -37,6 +37,15 @@ class table:
             return True
         return False
 
+    def remove(self, identifier):
+        if identifier:
+            try:
+                self.__table.pop(identifier)
+                return True
+            except:
+                return False
+        return False
+
     def get(self, identifier):
         # returns sym class
         try:
