@@ -83,6 +83,21 @@ def LE_OP(node, sym_table):
         return 1
     return 0
 
+def BAND(node, sym_table):
+    return BITWISE('&', node, sym_table)
+
+def BOR(node, sym_table):
+    return BITWISE('|', node, sym_table)
+
+def BXOR(node, sym_table):
+    return BITWISE('^', node, sym_table)
+
+def SLEFT(node, sym_table):
+    return BITWISE('<<', node, sym_table)
+
+def SRIGHT(node, sym_table):
+    return BITWISE('>>', node, sym_table)
+
 def PRINT(node, sym_table):
     exp = node.getChild(0)
     if exp.getType() == exp.TYPE["ACCESS"]:
@@ -94,7 +109,7 @@ def PRINT(node, sym_table):
             exp = result
         except:
             pass
-    if exp:
+    if exp != None:
         sym_table.appendLog(exp)
         return "No value to print"
     return None
@@ -119,6 +134,19 @@ def ACCESS(node, sym_table):
             return exp
         # error
         return None
+
+def UNSET(node, sym_table):
+    label = node.getChild(0)
+    if label.getType() == label.TYPE["ACCESS"]:
+        label = label.execute(sym_table)
+        if label:
+            index = label.getRef()
+            array = label.getValue()
+            array.pop(index)
+            label.setValue(array)
+    else:
+        sym_table.remove(label.getValue())
+    return None
 
 def XOR(node, sym_table):
     return LOGIC('^', node, sym_table)
@@ -167,6 +195,67 @@ def LOGIC(op, node, sym_table):
         exp = OPERAND(op, int(exp.getValue()), int(exp2.getValue()))     
     return exp
 
+def BITWISE(op, node, sym_table):
+    exp = TOVALUE(node.getChild(0), sym_table)
+    exp2 = TOVALUE(node.getChild(1), sym_table)
+
+    if exp == None or exp2 == None:
+        return None
+    elif (exp.getType() == node.TYPE["NUM"] and exp2.getType() == node.TYPE["NUM"]):
+        exp = OPERAND(op, int(exp.getValue()), int(exp2.getValue()))
+        if type(exp) == str:
+            sym_table.appendLog(exp)
+            exp = None
+        return exp
+    else:
+        # error
+        return None
+
+def ABS(node, sym_table):
+    exp = TOVALUE(node.getChild(0), sym_table)
+    if exp.getType() == node.TYPE["NUM"]:
+        value = int(exp.getValue())
+        if value < 0: 
+            return OPERAND('*',value, -1)
+        return value
+    elif exp.getType() == node.TYPE["FLOAT"]:
+        value = float(exp.getValue())
+        if value < 0: 
+            return OPERAND('*',value, -1)
+        return value
+    else:
+        # error handling
+        return None
+
+def NOT(node, sym_table):
+    exp = TOVALUE(node.getChild(0), sym_table)
+
+    if exp.getValue() != 0 and exp.getValue() != 1:
+        # error handling
+        exp = "Error at ! <" + str(exp.getValue()) + ">"
+        sym_table.appendLog(exp)
+        exp = None
+    else:
+        exp = OPERAND('!', int(exp.getValue()), None)
+        if exp:
+            exp = 1
+        else:
+            exp = 0     
+    return exp
+
+def BNOT(node, sym_table):
+    exp = TOVALUE(node.getChild(0), sym_table)
+
+    if exp.getType() == node.TYPE["NUM"]:
+        exp = OPERAND('~', int(exp.getValue()), None)
+        if type(exp) == str:
+            sym_table.appendLog(exp)
+            exp = None
+        return exp
+    else:
+        # error
+        return None
+
 def OPERAND(op, val, val2):
     if op == '+':
         return val + val2
@@ -187,8 +276,22 @@ def OPERAND(op, val, val2):
     # only for LOGIC
     elif op == '^':
         return val ^ val2
+    # only for BITWISE
+    elif op == '&':
+        return val & val2
+    elif op == '|':
+        return val | val2
+    elif op == '<<':
+        return val << val2
+    elif op == '>>':
+        return val >> val2
+    # only for UNARYOP
+    elif op == '!':
+        return not val
+    elif op == '~':
+        return ~val
     else:
-        return "No recognized operand"
+        return "No recognized operand" + str(op)
 
 def ASSIGN(node, sym_table):
     exp = node.getChild(0)
@@ -243,18 +346,24 @@ def TYPEOF(value):
             value.getRef()
             return "STRUCT"
         except:
-            return "NONE"
+            return "ID"
 
 def TOVALUE(value, sym_table):
     try:
-        if value.getType() == value.TYPE["ID"]:
+        if value.getType() == leaf.TYPE["ID"]:
             return value.execute(sym_table)
-        elif value.getType() == value.TYPE["ACCESS"]:
+        elif value.getType() == leaf.TYPE["ACCESS"]:
             result = value.execute(sym_table)
             index = result.getRef()
             array = result.getValue()
             value = array[index]
             return leaf(array[index], TYPEOF(value))
+        elif type(value) == sym:
+            if value.getType() == leaf.TYPE["STRUCT"]:
+                index = value.getRef()
+                array = value.getValue()
+                return array[index]
+            return value.getValue()
         return value
     except:
         # error 
