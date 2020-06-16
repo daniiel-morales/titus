@@ -29,7 +29,7 @@ class node():
 		"DIV"   : 10,
 		"POT"   : 11,
 		"MOD"   : 12,
-		"RETURN": 13,
+		"POINT" : 13,
 		"GTHAN" : 14,
 		"GE_OP" : 15,
 		"LTHAN" : 16,
