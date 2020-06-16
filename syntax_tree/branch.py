@@ -15,6 +15,8 @@ class branch(node):
     __counter = 0
     # node id
     __id = ''
+    # used for goto
+    __start_label_up_to = 0
 
     # _value and _type inherits from node class
     def __init__(self):
@@ -46,17 +48,13 @@ class branch(node):
         return None
 
     def start_execute(self, sym_table, start_from):
-        delete_label_up_to = 0
+        self.__start_label_up_to = 0
         for label in range(self.getSize()):
             label_node = self.getChild(label)
             if label_node.getValue() == start_from:
                 break
             else:
-                delete_label_up_to += 1
-
-        # pop labels to make a goto simulation
-        for label in range(delete_label_up_to):
-            self._value.pop(label)
+                self.__start_label_up_to += 1
 
         return self.execute(sym_table)
 
@@ -92,7 +90,13 @@ class branch(node):
             node.TYPE["BNOT"]   : operate.BNOT,
             # STRUCT
             node.TYPE["ACCESS"] : operate.ACCESS,
+
+            # CONVERT
+            node.TYPE["TOINT"]  : operate.TOINT,
+            node.TYPE["TOFLOAT"]: operate.TOFLOAT,
+            node.TYPE["TOCHAR"] : operate.TOCHAR,
             
+            node.TYPE["POINT"]  : operate.POINT,
             node.TYPE["UNSET"]  : operate.UNSET,
             node.TYPE["PRINT"]  : operate.PRINT,
             node.TYPE["ASSIGN"] : operate.ASSIGN
@@ -101,8 +105,8 @@ class branch(node):
     def execute(self, sym_table):
         #TODO need to return semantic errors
         has_print = False
-        label_list = list(self._value.keys())
-        for label in label_list:
+        goto_label = ''
+        for label in range(self.__start_label_up_to, len(self._value), 1):
             label_node = self._value[label]
             if label_node.getType() == self.TYPE["LABEL"]:
                 for child in range(label_node.getSize()):
@@ -111,6 +115,16 @@ class branch(node):
                         if has_print:
                             return [sym_table.getLog(), None]
                         return [None, None]
+                    elif child_node.getType() == self.TYPE["IF"]:
+                        boolean = child_node.getChild(0).execute(sym_table)
+                        if boolean != None:
+                            if boolean == 1:
+                                # need to finish the execution
+                                # and return a value for restart execution for other point
+                                goto_label = child_node.getChild(1).getValue()
+                                if has_print:
+                                    return [sym_table.getLog(), goto_label]
+                                return [None, goto_label]
                     elif child_node.getType() != self.TYPE["GOTO"]:
                         func=self.switch.get(child_node.getType(),lambda :'Node not defined')
                         result = func(child_node, sym_table)
