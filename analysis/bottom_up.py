@@ -342,6 +342,7 @@ def parse():
                     | '(' factor ')'
                     | '~' factor
                     | '!' factor
+                    | '&' VAR
                     | ABS '(' factor ')'
                     | ARRAY '(' ')'
                     | READ '(' ')'           
@@ -350,11 +351,11 @@ def parse():
         if p[1] == '(':
             l_leaf = p[4]
             new_branch.add(l_leaf)
-            if p[2].type == 'INT':
+            if p[2] == 'int':
                 new_branch.setType("TOINT")
-            elif p[2].type == 'FLOAT':
+            elif p[2] == 'float':
                 new_branch.setType("TOFLOAT")
-            elif p[2].type == 'CHAR':
+            elif p[2] == 'char':
                 new_branch.setType("TOCHAR")
             else:
                 new_branch = p[2]
@@ -366,6 +367,10 @@ def parse():
             l_leaf = p[2]
             new_branch.add(l_leaf)
             new_branch.setType("NOT")
+        elif p[1] == '&':
+            l_leaf = leaf(p[2], "ID")
+            new_branch.add(l_leaf)
+            new_branch.setType("POINT")
         elif p[1] == 'abs':
             l_leaf = p[3]
             new_branch.add(l_leaf)
