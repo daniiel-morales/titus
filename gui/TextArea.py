@@ -7,18 +7,18 @@
 # ░ ▒  ▒   ▒   ▒▒ ░░ ░░   ░ ▒░ ▒ ░ ▒ ░░  ░      ░  ░ ▒ ▒░   ░▒ ░ ▒░
 # ░ ░  ░   ░   ▒      ░   ░ ░  ▒ ░ ▒ ░░      ░   ░ ░ ░ ▒    ░░   ░ 
 #   ░          ░  ░         ░  ░   ░         ░       ░ ░     ░     
-                                                 
+# pylint: disable=import-error                                                
 from tkinter import Frame, Text, Scrollbar
 import tkinter.font as tkFont
 import re
-
+from gui.edit import TextLineNumbers, CustomText
 class TextArea(Frame):
 
     def __init__(self, *args, **kwargs):
         Frame.__init__(self, *args, **kwargs)
 
         # setting self.textarea
-        self.textarea = Text(self)
+        self.textarea = CustomText(self)
         self.textarea["wrap"] = "none"
         self.textarea["background"] = "white"
         self.textarea["borderwidth"] = 0
@@ -40,7 +40,13 @@ class TextArea(Frame):
         self.textarea.configure(xscrollcommand=textarea_scroll_x.set)
         self.textarea.configure(yscrollcommand=textarea_scroll_y.set)
 
-        
+        self.linenumbers = TextLineNumbers(self, width=20, bg = "lightgray")
+        self.linenumbers.attach(self.textarea)
+        self.linenumbers.pack(side="left", fill="y")
+
+        self.textarea.bind("<<Change>>", self._on_change)
+        self.textarea.bind("<Configure>", self._on_change)
+
         self.textarea.pack(in_=self, side="left", fill="both", expand=True)
         # binding with the keyboard press
         self.textarea.bind("<space>", self.highlighting)
@@ -62,6 +68,9 @@ class TextArea(Frame):
 
         self.toggle_string = 1
         self.toggle_comment = 1
+
+    def _on_change(self, event):
+        self.linenumbers.redraw()
     
     def analyze_pasted_text(self,event):
         # TODO for each word pasted send it to highlight method
