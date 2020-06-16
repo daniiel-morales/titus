@@ -11,7 +11,7 @@
 # pylint: disable=import-error    
 import tkinter.font as tkFont
 from tkinter.ttk import Notebook
-from tkinter import Frame, Label, Menu, Message, Text, Scrollbar, PhotoImage, Label
+from tkinter import Frame, Label, Menu, Message, Text, Scrollbar, PhotoImage, Label, Toplevel
 from gui.TextArea import TextArea as Editor
 from gui.AstViewer import showAST
 from gui.TableViewer import showTable
@@ -73,7 +73,7 @@ class App:
         runmenu.add_command(label="Symbol Table", command=self.show_sym_table)
         runmenu.add_command(label="Error Report", command=self.donothing)
         runmenu.add_command(label="Abstract Syntax Tree", command=self.show_ast)
-        runmenu.add_command(label="Grammar", command=self.donothing)
+        runmenu.add_command(label="Grammar", command=self.show_grammar)
 
         runmenu.add_separator()
         
@@ -136,6 +136,22 @@ class App:
             currentTextArea.clipboard_append(selected_text)
         except:
             pass
+
+    def show_grammar(self):
+        if self.__sym_table:
+            window = Toplevel()
+            window['bg'] = 'black'
+            productions = self.__sym_table.getGrammar()
+            keys = list(productions.keys())
+            keys.sort()
+            grammar = Message(window)
+            txt = ''
+            for production in keys:
+                txt += productions[production] + '\n' 
+            grammar['fg'] = 'white'
+            grammar['bg'] = 'black'
+            grammar['text'] = txt
+            grammar.pack(side='left')
 
     def show_sym_table(self):
         if self.__sym_table:
