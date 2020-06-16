@@ -165,37 +165,43 @@ def parse():
         'start : code'
         global __ast
         global sym_table
+        sym_table.appendGrammar(0, 's -> code')
         p[0] = [__ast, sym_table]
 
     def p_code(p):
         '''code : code LABEL ":" list
                 | MAIN ":" list '''
         global __ast
+        global sym_table
         if len(p) == 4:
             p[3].setType("LABEL")
             p[3].setValue("MAIN")
             __ast.add(p[3])
+            sym_table.appendGrammar(1, 'code -> MAIN : list')
         else:
             p[4].setType("LABEL")
             p[4].setValue(str(p[2]))
             __ast.add(p[4])
+            sym_table.appendGrammar(2, 'code -> code LABEL : list')
         p[0] = __ast
 
     def p_statement_list(p):
         '''list : list statement ";" 
                 | statement  ";" '''
-
+        global sym_table
         if len(p) == 3:
             new_branch = branch()
             new_branch.add(p[1])
             p[0] = new_branch
+            sym_table.appendGrammar(3, 'list -> statement ;')
         else:
             p[1].add(p[2])
             p[0] = p[1]
+            sym_table.appendGrammar(4, 'list -> list statement ;')
 
     def p_statement_assign(p):
         'statement : is_array_term "=" expression'
-
+        global sym_table
         l_leaf = p[1]
         r_leaf = p[3]
 
@@ -205,36 +211,44 @@ def parse():
         new_branch.setType("ASSIGN")
 
         p[0] = new_branch
+        sym_table.appendGrammar(5, 'statement -> is_array_term = expression')
 
     def p_statement_expr(p):
         'statement : PRINT "(" term  ")" '
+        global sym_table
         leaf = p[3]
         new_branch = branch()
         new_branch.add(leaf)
         new_branch.setType("PRINT")
 
         p[0] = new_branch
+        sym_table.appendGrammar(6, 'statement -> PRINT ( term  ) ')
 
     def p_statement_group(p):
         '''statement : IF '(' expression ')' GOTO LABEL
                      | UNSET '(' term ')'
                      | GOTO LABEL
                      | EXIT                          '''
+        global sym_table
         new_branch = branch()
         if len(p) > 5:
             new_branch.add(p[3])
             r_leaf = leaf(p[6], "LABEL")
             new_branch.add(r_leaf)
             new_branch.setType("IF")
+            sym_table.appendGrammar(7, 'statement -> IF ( expression ) GOTO LABEL ')
         elif len(p) > 3:
             new_branch.add(p[3])
             new_branch.setType("UNSET")
+            sym_table.appendGrammar(8, 'statement -> UNSET ( term ) ')
         elif len(p) > 2:
             r_leaf = leaf(p[2], "LABEL")
             new_branch.add(r_leaf)
             new_branch.setType("GOTO")
+            sym_table.appendGrammar(9, 'statement -> GOTO LABEL ')
         else:
             new_branch.setType("EXIT")
+            sym_table.appendGrammar(10, 'statement -> EXIT ')
         p[0] = new_branch
 
     def p_expression_binop(p):
@@ -252,33 +266,44 @@ def parse():
                       '''
         l_leaf = p[1]
         r_leaf = p[3]
-
+        global sym_table
         new_branch = branch()
         new_branch.add(l_leaf)
         new_branch.add(r_leaf)
 
         if p[2] == '+':
             new_branch.setType("ADD")
+            sym_table.appendGrammar(11, 'expression -> term + term')
         elif p[2] == '-':
             new_branch.setType("SUB")
+            sym_table.appendGrammar(12, 'expression -> term - term')
         elif p[2] == '*':
             new_branch.setType("MUL")
+            sym_table.appendGrammar(13, 'expression -> term * term')
         elif p[2] == '/':
             new_branch.setType("DIV")
+            sym_table.appendGrammar(14, 'expression -> term / term')
         elif p[2] == '%':
             new_branch.setType("MOD")
+            sym_table.appendGrammar(15, 'expression -> term % term')
         elif p[2] == '&':
             new_branch.setType("BAND")
+            sym_table.appendGrammar(16, 'expression -> term & term')
         elif p[2] == '|':
             new_branch.setType("BOR")
+            sym_table.appendGrammar(17, 'expression -> term | term')
         elif p[2] == '^':
             new_branch.setType("BXOR")
+            sym_table.appendGrammar(18, 'expression -> term ^ term')
         elif p[2] == '<':
             new_branch.setType("LTHAN")
+            sym_table.appendGrammar(19, 'expression -> term < term')
         elif p[2] == '>':
             new_branch.setType("GTHAN")
+            sym_table.appendGrammar(20, 'expression -> term > term')
         else:
             new_branch.setType("XOR")
+            sym_table.appendGrammar(21, 'expression -> term XOR term')
         p[0] = new_branch
 
     def p_expression_binop2(p):
@@ -293,45 +318,53 @@ def parse():
                                     '''
         l_leaf = p[1]
         r_leaf = p[4]
-
+        global sym_table
         new_branch = branch()
         new_branch.add(l_leaf)
         new_branch.add(r_leaf)
 
         if p[2] == '&':
             new_branch.setType("AND")
+            sym_table.appendGrammar(22, 'expression -> term && term')
         elif p[2] == '|':
             new_branch.setType("OR")
+            sym_table.appendGrammar(23, 'expression -> term || term')
         elif p[2] == '<' and p[3] == '<':
             new_branch.setType("SLEFT")
+            sym_table.appendGrammar(24, 'expression -> term << term')
         elif p[2] == '>' and p[3] == '>':
             new_branch.setType("SRIGHT")
+            sym_table.appendGrammar(25, 'expression -> term >> term')
         elif p[2] == '!':
             new_branch.setType("NOEQUAL")
+            sym_table.appendGrammar(26, 'expression -> term != term')
         elif p[2] == '=':
             new_branch.setType("EQUAL")
+            sym_table.appendGrammar(27, 'expression -> term == term')
         elif p[2] == '<' and p[3] == '=':
             new_branch.setType("LE_OP")
+            sym_table.appendGrammar(28, 'expression -> term <= term')
         elif p[2] == '>' and p[3] == '=':
             new_branch.setType("GE_OP")
-        else:
-            new_branch.setType("XOR")
+            sym_table.appendGrammar(29, 'expression -> term >= term')
         p[0] = new_branch
 
     def p_expression(p):
         'expression : term '
         p[0] = p[1]
+        global sym_table
+        sym_table.appendGrammar(30, 'expression -> term ')
 
     def p_term_uminus(p):
         "term : '-' factor %prec UMINUS"
         l_leaf = p[2]
         r_leaf = leaf(-1, "NUM")
-
+        global sym_table
         new_branch = branch()
         new_branch.add(l_leaf)
         new_branch.add(r_leaf)
         new_branch.setType("MUL")
-        
+        sym_table.appendGrammar(31, 'term -> - factor')
         p[0] = new_branch
 
     
@@ -347,40 +380,49 @@ def parse():
                     | ARRAY '(' ')'
                     | READ '(' ')'           
                                 '''
+        global sym_table
         new_branch = branch()
         if p[1] == '(':
             l_leaf = p[4]
             new_branch.add(l_leaf)
             if p[2] == 'int':
                 new_branch.setType("TOINT")
+                sym_table.appendGrammar(32, 'expression -> ( INT ) factor')
             elif p[2] == 'float':
                 new_branch.setType("TOFLOAT")
+                sym_table.appendGrammar(33, 'expression -> ( FLOAT ) factor')
             elif p[2] == 'char':
                 new_branch.setType("TOCHAR")
+                sym_table.appendGrammar(34, 'expression -> ( CHAR ) factor')
             else:
                 new_branch = p[2]
+                sym_table.appendGrammar(35, 'expression -> ( factor )')
         elif p[1] == '~':
             l_leaf = p[2]
             new_branch.add(l_leaf)
             new_branch.setType("BNOT")
+            sym_table.appendGrammar(36, 'expression -> ~ factor')
         elif p[1] == '!':
             l_leaf = p[2]
             new_branch.add(l_leaf)
             new_branch.setType("NOT")
+            sym_table.appendGrammar(37, 'expression -> ! factor')
         elif p[1] == '&':
             l_leaf = leaf(p[2], "ID")
             new_branch.add(l_leaf)
             new_branch.setType("POINT")
+            sym_table.appendGrammar(38, 'expression -> & factor')
         elif p[1] == 'abs':
             l_leaf = p[3]
             new_branch.add(l_leaf)
             new_branch.setType("ABS")
+            sym_table.appendGrammar(39, 'expression -> ABS ( factor )')
         elif p[1] == 'array':
             new_branch.setType("ARRAY")
+            sym_table.appendGrammar(40, 'expression -> ARRAY ( )')
         elif p[1] == 'read':
             new_branch.setType("READ")
-        else:
-            new_branch = p[1]
+            sym_table.appendGrammar(41, 'expression -> READ ( )')
 
         p[0] = new_branch
 
@@ -388,11 +430,15 @@ def parse():
         'factor : NUMBER'
         l_leaf = leaf(p[1], "NUM")
         p[0] = l_leaf
+        global sym_table
+        sym_table.appendGrammar(42, 'factor -> NUMBER')
 
     def p_expression_decimal(p):
         'factor : DECIMAL'
         l_leaf = leaf(p[1], "FLOAT")
         p[0] = l_leaf
+        global sym_table
+        sym_table.appendGrammar(43, 'factor -> DECIMAL')
 
     def p_expression_string(p):
         'factor : STRING'
@@ -400,28 +446,37 @@ def parse():
         string = string.replace("\"","")
         l_leaf = leaf(string, "STRING")
         p[0] = l_leaf
+        global sym_table
+        sym_table.appendGrammar(44, 'factor -> STRING')
 
     def p_term_array(p):
         '''is_array_term : is_array_term '[' factor ']'
 	  	                | VAR
                                                 '''
+        global sym_table
         if len(p) > 2:
             new_branch = branch()
             new_branch.add(p[1])
             new_branch.add(p[3])
             new_branch.setType("ACCESS")
             p[0] = new_branch
+            sym_table.appendGrammar(45, 'is_array_term -> is_array_term [ factor ]')
         else:
             l_leaf = leaf(p[1], "ID")
             p[0] = l_leaf
+            sym_table.appendGrammar(46, 'is_array_term -> VAR')
 
     def p_factor_id(p):
         'factor : is_array_term'
         p[0] = p[1]
+        global sym_table
+        sym_table.appendGrammar(47, 'factor -> is_array_term')
 
     def p_term_factor(p):
         'term : factor'
         p[0] = p[1]
+        global sym_table
+        sym_table.appendGrammar(48, 'term -> factor')
 
     def p_error(p):
         if p:
