@@ -33,6 +33,6 @@ class leaf(node):
 
     def execute(self, sym_table):
         if self._type == node.TYPE["ID"]:
-            return sym_table.get(str(self._value))
+            return sym_table.get(self._value)
         return self._value
         
