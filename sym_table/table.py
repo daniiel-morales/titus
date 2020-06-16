@@ -13,11 +13,13 @@ class table:
     __table = None
     __log = None
     __scope = None
+    __grammar = None
 
     def __init__(self):
         self.__table = {}
         self.__log = ''
         self.__scope = 'GLOBAL'
+        self.__grammar = {}
 
     def add(self, identifier, typ, size, value, scope):
         if self.get(identifier) == None:
@@ -61,7 +63,16 @@ class table:
 
     def appendLog(self, txt):
         self.__log += '>> ' + str(txt) + '\n'
-    
+
+    def appendGrammar(self, index, txt):
+        try:
+            self.__grammar[index]
+        except:
+            self.__grammar[index] = txt
+
+    def getGrammar(self):
+        return self.__grammar
+
     def getLog(self):
         return self.__log
 
