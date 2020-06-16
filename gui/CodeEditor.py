@@ -16,7 +16,6 @@ from gui.TextArea import TextArea as Editor
 from gui.AstViewer import showAST
 from gui.TableViewer import showTable
 import analysis.bottom_up as left
-
 class App:
     # need it for generate reports
     __ast = None
@@ -158,7 +157,23 @@ class App:
             self.__ast.root = result[0]
             self.__ast.graph()
             self.__sym_table = result[1]
-
+            goto_called = True
+            start_from = "MAIN"
+            while goto_called:
+                goto_called = False
+                compute = self.__ast.start_execute(self.__sym_table, start_from)
+                # lookup the last line
+                index = self.terminal.search(r'\n', "insert", backwards=True, regexp=True)
+                txt = self.terminal.get(str(index),'end-1c')
+                if txt == "":
+                    index ="1.0"
+                else:
+                    index = self.terminal.index("%s+1c" % index)
+                if compute[0]:
+                    self.terminal.insert(str(float(index)+1), compute[0])
+                if compute[1]:
+                    goto_called = True
+                    start_from = compute[1]
     # parser instance for terminal
     ply_left = left.parse()
     
