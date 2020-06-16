@@ -101,12 +101,14 @@ def SRIGHT(node, sym_table):
 def PRINT(node, sym_table):
     exp = node.getChild(0)
     if exp.getType() == exp.TYPE["ACCESS"]:
-        exp = TOVALUE(node.getChild(0).execute(sym_table), sym_table)
+        exp = TOVALUE(exp.execute(sym_table), sym_table)
     else:
-        exp = node.getChild(0).execute(sym_table)
         try:
-            result = exp.getValue()
-            exp = result
+            exp = sym_table.get(exp.getValue())
+            if exp != None:
+                exp = exp.getValue()
+                if type(exp) == leaf:
+                    exp = exp.execute(sym_table).getValue()
         except:
             pass
     if exp != None:
@@ -150,6 +152,49 @@ def UNSET(node, sym_table):
 
 def XOR(node, sym_table):
     return LOGIC('^', node, sym_table)
+
+def POINT(node, sym_table):
+    return node.getChild(0)
+
+def TOINT(node, sym_table):
+    return leaf(CONVERT('int', node, sym_table), "NUM")
+
+def TOFLOAT(node, sym_table):
+    return leaf(CONVERT('float', node, sym_table), "FLOAT")
+
+def TOCHAR(node, sym_table):
+    return leaf(CONVERT('char', node, sym_table), "STRING")
+
+def CONVERT(op, node, sym_table):
+    exp = node.getChild(0)
+    if exp.getType() == leaf.TYPE["ACCESS"]:
+        exp = exp.execute(sym_table)
+        identifier = exp.getID()
+        exp = sym_table.get(identifier)
+        array = exp.getValue()
+        index = list(array.keys())
+        exp = array[index[0]]
+    else:
+        exp = TOVALUE(exp, sym_table)
+
+    value = exp.getValue()
+    if value:
+        if exp.getType() == leaf.TYPE["STRING"]:
+            if op == 'char':
+                return value[0]
+            else:
+                return OPERAND(op, OPERAND('string', value[0], None), None)
+        else:
+            if op == 'char':
+                if value > 255 :
+                    # apply mod of 255 and convert to ASCII
+                    value = value % 255
+                return chr(int(value))
+            else:
+                return OPERAND(op, value, None)
+    else:
+        # error handling
+        return None
 
 def MATH(op, node, sym_table):
     exp = TOVALUE(node.getChild(0), sym_table)
@@ -290,6 +335,13 @@ def OPERAND(op, val, val2):
         return not val
     elif op == '~':
         return ~val
+    # only for CONVERT
+    elif op == 'int':
+        return int(val)
+    elif op == 'float':
+        return float(val)
+    elif op == 'string':
+        return ord(val)
     else:
         return "No recognized operand" + str(op)
 
@@ -310,8 +362,9 @@ def ASSIGN(node, sym_table):
                 index = exp2.getRef()
                 array = exp2.getValue()
                 exp2 = array[index]
-            result = exp2.getValue()
-            exp2 = result
+            if exp2.getType() != TYPE["ID"]:
+                result = exp2.getValue()
+                exp2 = result
         except:
             pass
 
