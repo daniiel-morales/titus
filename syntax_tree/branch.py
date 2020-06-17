@@ -96,6 +96,7 @@ class branch(node):
             node.TYPE["TOFLOAT"]: operate.TOFLOAT,
             node.TYPE["TOCHAR"] : operate.TOCHAR,
             
+            node.TYPE["READ"]  : operate.READ,
             node.TYPE["POINT"]  : operate.POINT,
             node.TYPE["UNSET"]  : operate.UNSET,
             node.TYPE["PRINT"]  : operate.PRINT,
@@ -140,6 +141,9 @@ class branch(node):
             else:
                 func=self.switch.get(self.getType(),lambda :'Node not defined')
                 return func(self, sym_table)
+        if self.getType() == self.TYPE["READ"]:
+            func=self.switch.get(self.getType(),lambda :'Node not defined')
+            return func(self, sym_table)
         if has_print:
             return [sym_table.getLog(), None]
         return [None,None]
