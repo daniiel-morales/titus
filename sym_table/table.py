@@ -9,17 +9,22 @@
 #   ░          ░  ░         ░  ░   ░         ░       ░ ░     ░     
 # pylint: disable=import-error
 from sym_table.sym import sym
+from tkinter import StringVar
 class table:
     __table = None
     __log = None
     __scope = None
     __grammar = None
+    error = ''
+    read_input = None
+    terminal = None
 
     def __init__(self):
         self.__table = {}
         self.__log = ''
         self.__scope = 'GLOBAL'
         self.__grammar = {}
+        self.read_input = StringVar ()
 
     def add(self, identifier, typ, size, value, scope):
         if self.get(identifier) == None:
@@ -62,7 +67,10 @@ class table:
         return self.__scope
 
     def appendLog(self, txt):
-        self.__log += '>> ' + str(txt) + '\n'
+        self.__log += str(txt)
+
+    def cleanLog(self):
+        self.__log = ''
 
     def appendGrammar(self, index, txt):
         try:
