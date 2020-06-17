@@ -40,11 +40,11 @@ class App:
 
         # file menu
         filemenu = Menu(menubar, tearoff=0)
-        filemenu.add_command(label="New", command=self.donothing)
+        filemenu.add_command(label="New", command=self.newFile)
         filemenu.add_command(label="Open", command=self.donothing)
         filemenu.add_command(label="Save", command=self.donothing)
         filemenu.add_command(label="Save as...", command=self.donothing)
-        filemenu.add_command(label="Close", command=self.donothing)
+        filemenu.add_command(label="Close", command=self.exitTab)
 
         filemenu.add_separator()
 
@@ -175,8 +175,10 @@ class App:
             self.__sym_table = result[1]
             goto_called = True
             start_from = "MAIN"
+            compute = [None, None]
             while goto_called:
                 goto_called = False
+                self.__sym_table.terminal = self.terminal
                 compute = self.__ast.start_execute(self.__sym_table, start_from)
                 # lookup the last line
                 index = self.terminal.search(r'\n', "insert", backwards=True, regexp=True)
@@ -187,11 +189,10 @@ class App:
                     index = self.terminal.index("%s+1c" % index)
                 if compute[0]:
                     self.terminal.insert(str(float(index)+1), compute[0])
+                    self.__sym_table.cleanLog()
                 if compute[1]:
                     goto_called = True
                     start_from = compute[1]
-    # parser instance for terminal
-    ply_left = left.parse()
     
     def execute_command(self, event):
         # lookup the last line
@@ -202,10 +203,23 @@ class App:
         else:
             index = self.terminal.index("%s+1c" % index)
         input = self.terminal.get(index,'end-1c')
-        result  = self.ply_left(input)
-        if result:
-            self.terminal.insert(str(float(index)+1), "\n")
-            self.terminal.insert(str(float(index)+1), result)
+        # send the input to the calculate 
+        self.__sym_table.read_input.set(input)
+
+    def newFile(self):
+        selectedTab = self.tabs.index("current")
+        lastindex = self.tabs.index("end")-1
+
+        textarea = Editor(self.tabs)
+        self.tabs.insert(lastindex, textarea, text="Tab" + str(lastindex+1))
+        self.tabs.select(lastindex)
+
+    def exitTab(self):
+        selectedTab = self.tabs.index("current")
+        currentTab = self.tabs.winfo_children()[selectedTab+1]
+        
+        self.tabs.select(self.tabs.winfo_children()[selectedTab])
+        currentTab.destroy()
 
     def addTab(self, event):
         selectedTab = self.tabs.index("current")
