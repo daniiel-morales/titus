@@ -159,11 +159,11 @@ class node():
             try:
                 command.run(cmd)                            
             except:
-                print("AST>> export to png error")
+                print("Titus>> dot command not found")
         
     def __verify_os(self):
         if sys.platform.startswith("win"):
-            return "./graphviz_port/bin/dot.exe"
+            return "dot.exe"
         elif sys.platform.startswith("linux") or sys.platform.startswith("aix"):
             return "dot"
         else:
