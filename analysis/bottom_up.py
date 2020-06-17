@@ -170,20 +170,44 @@ def parse():
 
     def p_code(p):
         '''code : code LABEL ":" list
+                | code LABEL ":"
+                | MAIN ":"
                 | MAIN ":" list '''
         global __ast
         global sym_table
         if len(p) == 4:
-            p[3].setType("LABEL")
-            p[3].setValue("MAIN")
-            __ast.add(p[3])
-            sym_table.appendGrammar(1, 'code -> MAIN : list')
+            if p[3] != ':':
+                p[3].setType("LABEL")
+                p[3].setValue("MAIN")
+                __ast.add(p[3])
+                sym_table.appendGrammar(1, 'code -> MAIN : list')
+            else:
+                new_branch= branch()
+                new_branch.setType("LABEL")
+                new_branch.setValue(str(p[2]))
+                __ast.add(new_branch)
+                sym_table.appendGrammar(2.1, 'code -> code LABEL :')
+        elif len(p) == 3:
+            new_branch = branch()
+            new_branch.setType("LABEL")
+            new_branch.setValue("MAIN")
+            __ast.add(new_branch)
+            sym_table.appendGrammar(1.1, 'code -> MAIN :')
         else:
             p[4].setType("LABEL")
             p[4].setValue(str(p[2]))
             __ast.add(p[4])
             sym_table.appendGrammar(2, 'code -> code LABEL : list')
         p[0] = __ast
+
+    # syntax error recovery
+    def p_statement_error(p):
+        '''list : list error ";" 
+                | error ";" '''
+        if len(p) > 3:
+            p[0] = p[1]
+        else:
+            p[0] = None
 
     def p_statement_list(p):
         '''list : list statement ";" 
@@ -195,9 +219,15 @@ def parse():
             p[0] = new_branch
             sym_table.appendGrammar(3, 'list -> statement ;')
         else:
-            p[1].add(p[2])
-            p[0] = p[1]
-            sym_table.appendGrammar(4, 'list -> list statement ;')
+            if p[1] != None: 
+                p[1].add(p[2])
+                p[0] = p[1]
+                sym_table.appendGrammar(4, 'list -> list statement ;')
+            else:
+                new_branch = branch()
+                new_branch.add(p[2])
+                p[0] = new_branch
+                sym_table.appendGrammar(3, 'list -> statement ;')
 
     def p_statement_assign(p):
         'statement : is_array_term "=" expression'
@@ -479,22 +509,10 @@ def parse():
         sym_table.appendGrammar(48, 'term -> factor')
 
     def p_error(p):
+        global sym_table
         if p:
             global __text
-            print("Syntax error at '" + str(p.value) + "', line:" + str(p.lineno) + ", column:" + str(find_column(__text, p)))
-            # Read ahead looking for a terminating ";"
-            tok =  p 
-            while True:
-                if not tok or tok.type == ';':
-                    tok =  parser.token()   
-                    break
-                else:
-                    # Get the next token
-                    tok =  parser.token()  
-            parser.errok()
-
-            # Return to the parser as the next lookahead token
-            return tok
+            sym_table.error += "Syntax error at line:" + str(p.lineno) + ", column:" + str(find_column(__text, p)) + "\n"
         else:
             print("Syntax error at EOF")
 
