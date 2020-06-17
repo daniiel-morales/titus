@@ -10,6 +10,8 @@
 # pylint: disable=import-error
 from sym_table.sym import sym
 from syntax_tree.leaf import leaf
+import tkinter as tk
+from tkinter import Label, StringVar, Tk
 def ADD(node, sym_table):
     return MATH('+', node, sym_table)
 
@@ -109,6 +111,13 @@ def PRINT(node, sym_table):
                 exp = exp.getValue()
                 if type(exp) == leaf:
                     exp = exp.execute(sym_table).getValue()
+            else:
+                if node.getChild(0).getType() == leaf.TYPE["STRING"]:
+                    exp = node.getChild(0).getValue()
+                    exp = exp.replace('\\n', '\n')
+                    exp = exp.replace('\\t', '\t')
+                else:
+                    exp = node.getChild(0).getValue()
         except:
             pass
     if exp != None:
@@ -164,6 +173,37 @@ def TOFLOAT(node, sym_table):
 
 def TOCHAR(node, sym_table):
     return leaf(CONVERT('char', node, sym_table), "STRING")
+
+def READ(node, sym_table):
+    # lookup the last line
+    index = sym_table.terminal.search(r'\n', "insert", backwards=True, regexp=True)
+    txt = sym_table.terminal.get(str(index),'end-1c')
+    if txt == "":
+        index ="1.0"
+    index = sym_table.terminal.index("%s+1c" % index)
+
+    # print before start waiting
+    sym_table.terminal.insert(str(float(index)+1), sym_table.getLog())
+    sym_table.cleanLog()
+    sym_table.terminal.focus_set()
+
+    # wait input from terminal
+    x = Label()
+    global read_input
+    x.wait_variable(sym_table.read_input)
+    value = sym_table.read_input.get()
+    typ = ''
+    try:
+        try:
+            value = int(value)
+            typ = 'NUM'
+        except:
+            value = float(value)
+            typ = 'FLOAT'
+    except:
+        typ = 'STRING'
+    
+    return leaf(value, typ)
 
 def CONVERT(op, node, sym_table):
     exp = node.getChild(0)
