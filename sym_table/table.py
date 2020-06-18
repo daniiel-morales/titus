@@ -86,3 +86,6 @@ class table:
 
     def printTable(self):
         return self.__table
+
+    def setTable(self, table):
+        self.__table = table
