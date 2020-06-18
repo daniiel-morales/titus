@@ -11,11 +11,12 @@
 # pylint: disable=import-error    
 import tkinter.font as tkFont
 from tkinter.ttk import Notebook
-from tkinter import Frame, Label, Menu, Message, Text, Scrollbar, PhotoImage, Label, Toplevel
+from tkinter import Frame, Label, Menu, Message, Text, Scrollbar, PhotoImage, Label, Toplevel, filedialog, messagebox
 from gui.TextArea import TextArea as Editor
 from gui.AstViewer import showAST
 from gui.TableViewer import showTable
 import analysis.bottom_up as left
+import os
 class App:
     # need it for generate reports
     __ast = None
@@ -41,9 +42,9 @@ class App:
         # file menu
         filemenu = Menu(menubar, tearoff=0)
         filemenu.add_command(label="New", command=self.newFile)
-        filemenu.add_command(label="Open", command=self.donothing)
-        filemenu.add_command(label="Save", command=self.donothing)
-        filemenu.add_command(label="Save as...", command=self.donothing)
+        filemenu.add_command(label="Open", command=self.file_open)
+        filemenu.add_command(label="Save", command=self.file_save)
+        filemenu.add_command(label="Save as...", command=self.file_save_as)
         filemenu.add_command(label="Close", command=self.exitTab)
 
         filemenu.add_separator()
@@ -71,7 +72,7 @@ class App:
         runmenu.add_separator()
 
         runmenu.add_command(label="Symbol Table", command=self.show_sym_table)
-        runmenu.add_command(label="Error Report", command=self.donothing)
+        runmenu.add_command(label="Error Report", command=self.show_error)
         runmenu.add_command(label="Abstract Syntax Tree", command=self.show_ast)
         runmenu.add_command(label="Grammar", command=self.show_grammar)
 
@@ -81,9 +82,9 @@ class App:
 
 
         # option menu
-        optionmenu = Menu(menubar, tearoff=0)
-        optionmenu.add_command(label="Font...", command=self.donothing)
-        optionmenu.add_command(label="Bottom-Up Analysis", command=self.donothing)
+        #optionmenu = Menu(menubar, tearoff=0)
+        #optionmenu.add_command(label="Theme...", command=self.donothing)
+        #optionmenu.add_command(label="Line Numbers...", command=self.donothing)
 
 
         # help menu
@@ -152,6 +153,27 @@ class App:
             grammar['bg'] = 'black'
             grammar['text'] = txt
             grammar.pack(side='left')
+    
+    def show_error(self):
+        if self.__sym_table:
+            if self.__sym_table.error != '':
+                window = Toplevel()
+                window['bg'] = 'black'
+
+                grammar = Message(window)
+                grammar['fg'] = 'white'
+                grammar['bg'] = 'black'
+                grammar['text'] = self.__sym_table.error
+                grammar.pack(side='left')
+            else:
+                window = Toplevel()
+                window['bg'] = 'black'
+
+                grammar = Message(window)
+                grammar['fg'] = 'white'
+                grammar['bg'] = 'black'
+                grammar['text'] = 'Not Errors Found'
+                grammar.pack(side='left')
 
     def show_sym_table(self):
         if self.__sym_table:
@@ -205,6 +227,16 @@ class App:
         input = self.terminal.get(index,'end-1c')
         # send the input to the calculate 
         self.__sym_table.read_input.set(input)
+        
+    def undo(self, event=None):
+        selectedTab = self.tabs.index("current")
+        currentTextArea = self.tabs.winfo_children()[selectedTab+1].textarea
+        currentTextArea.edit_undo()
+        
+    def redo(self, event=None):
+        selectedTab = self.tabs.index("current")
+        currentTextArea = self.tabs.winfo_children()[selectedTab+1].textarea
+        currentTextArea.edit_redo()   
 
     def newFile(self):
         selectedTab = self.tabs.index("current")
@@ -215,11 +247,75 @@ class App:
         self.tabs.select(lastindex)
 
     def exitTab(self):
+        result = self.save_if_modified()
+        if result != None: #None => Aborted or Save cancelled, False => Discarded, True = Saved or Not modified
+            selectedTab = self.tabs.index("current")
+            currentTab = self.tabs.winfo_children()[selectedTab+1]
+            
+            self.tabs.select(self.tabs.winfo_children()[selectedTab])
+            currentTab.destroy()
+
+    def save_if_modified(self, event=None):
         selectedTab = self.tabs.index("current")
-        currentTab = self.tabs.winfo_children()[selectedTab+1]
-        
-        self.tabs.select(self.tabs.winfo_children()[selectedTab])
-        currentTab.destroy()
+        currentTextArea = self.tabs.winfo_children()[selectedTab+1].textarea
+        if currentTextArea.edit_modified(): #modified
+            response = messagebox.askyesnocancel("Save?", "This document has been modified. Do you want to save changes?") #yes = True, no = False, cancel = None
+            if response: #yes/save
+                result = self.file_save()
+                if result == "saved": #saved
+                    return True
+                else: #save cancelled
+                    return None
+            else:
+                return response #None = cancel/abort, False = no/discard
+        else: #not modified
+            return True
+
+    def file_open(self, event=None, filepath=None):
+        result = self.save_if_modified()
+        if result != None: #None => Aborted or Save cancelled, False => Discarded, True = Saved or Not modified
+            if filepath == None:
+                filepath = filedialog.askopenfilename()
+            if filepath != None  and filepath != '':
+                with open(filepath, encoding="utf-8") as f:
+                    fileContents = f.read()# Get all the text from file.           
+                # Set current text to a new Tab file contents
+                lastindex = self.tabs.index("end")-1
+
+                textarea = Editor(self.tabs)
+                self.tabs.insert(lastindex, textarea, text="Tab" + str(lastindex+1))
+                self.tabs.select(lastindex)
+
+                textarea.textarea.insert(1.0, fileContents)
+                textarea.textarea.edit_modified(False)
+                tab_tittle = os.path.basename(filepath)
+                self.tabs.tab(lastindex, text = tab_tittle)
+
+    def file_save(self, event=None):
+        selectedTab = self.tabs.index("current")
+        currentName = self.tabs.tab(selectedTab, "text")
+        if 'Tab' in currentName:
+            result = self.file_save_as()
+        else:
+            result = self.file_save_as(filepath='./' + currentName)
+        return result
+
+    def file_save_as(self, event=None, filepath=None):
+        if filepath == None:
+            filepath = filedialog.asksaveasfilename(filetypes=(('Text files', '*.txt'), ('Titus files', '*.ti'), ('All files', '*.*'))) #defaultextension='.txt'
+        try:
+            with open(filepath, 'wb') as f:
+                selectedTab = self.tabs.index("current")
+                currentTextArea = self.tabs.winfo_children()[selectedTab+1].textarea
+                text = currentTextArea.get(1.0, "end-1c")
+                f.write(bytes(text, 'UTF-8'))
+                currentTextArea.edit_modified(False)
+                tab_tittle = os.path.basename(filepath)
+                self.tabs.tab(selectedTab, text = tab_tittle)
+                return "saved"
+        except FileNotFoundError:
+            print('Titus>> File Not Found Error')
+            return "cancelled"
 
     def addTab(self, event):
         selectedTab = self.tabs.index("current")
