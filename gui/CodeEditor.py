@@ -11,7 +11,7 @@
 # pylint: disable=import-error    
 import tkinter.font as tkFont
 from tkinter.ttk import Notebook
-from tkinter import Frame, Label, Menu, Message, Text, Scrollbar, PhotoImage, Label, Toplevel, filedialog, messagebox
+from tkinter import Frame, Label, Menu, Message, Text, Scrollbar, PhotoImage, Label, Toplevel, filedialog, messagebox, Button
 from gui.TextArea import TextArea as Editor
 from gui.AstViewer import showAST
 from gui.TableViewer import showTable
@@ -78,7 +78,7 @@ class App:
 
         runmenu.add_separator()
         
-        runmenu.add_command(label="Debugging", command=self.donothing)
+        runmenu.add_command(label="Debugging", command=self.execute_debug)
 
 
         # option menu
@@ -182,6 +182,89 @@ class App:
     def show_ast(self):
         showAST()
 
+    def update_line_debugg(self, event= None):
+        self.count["text"] = "Line: %s" % str(self.c+1)
+
+        # split lines
+        selectedTab = self.tabs.index("current")
+        currentTextArea = self.tabs.winfo_children()[selectedTab+1].textarea
+        lines = currentTextArea.get('1.0','end-1c').split('\n')
+
+        # start execute line by self.c counter
+        ply_left = left.parse()
+        if self.c < len(lines):
+            if "main" not in lines[self.c]:
+                line = "main:" + lines[self.c]
+                result  = ply_left(left, line)
+                if result:
+                    ast = result[0]
+                    ast.setType("LABEL")
+                    ast.setValue("S")
+                    ast.root = result[0]
+
+                    if self.__sym_table != None:
+                        self.__sym_table.setTable( {**self.__sym_table.printTable(), **result[1].printTable()} )
+                    else:
+                        self.__sym_table = result[1]
+
+                    goto_called = True
+                    start_from = "MAIN"
+                    compute = [None, None]
+                    while goto_called:
+                        goto_called = False
+                        self.__sym_table.terminal = self.terminal
+                        compute = ast.start_execute(self.__sym_table, start_from)
+                        # lookup the last line
+                        index = self.terminal.search(r'\n', "insert", backwards=True, regexp=True)
+                        txt = self.terminal.get(str(index),'end-1c')
+                        if txt == "":
+                            index ="1.0"
+                        else:
+                            index = self.terminal.index("%s+1c" % index)
+                        if compute[0]:
+                            self.terminal.insert(str(float(index)+1), compute[0])
+                            self.__sym_table.cleanLog()
+                        if compute[1]:
+                            goto_called = True
+                            start_from = compute[1]
+
+            
+            self.c = self.c + 1
+            self.label_last_line["text"] = "Line: %s" % str(self.c+1)
+
+    c = 0
+    def execute_debug(self, event = None):
+        self.__sym_table = None
+        self.c = 0
+        # create debug player
+        window = Toplevel()
+        window['bg'] = 'black'
+
+        label_count = Label(window, text="Execute Now:", 
+                            borderwidth=0, width=10, bg = "black", fg = "white")
+        label_count.grid(row=0, column=0, sticky="nsew", padx=1, pady=1)
+
+        label_last = Label(window, text="Executed Before:", 
+                            borderwidth=0, width=10, bg = "black", fg = "white")
+        label_last.grid(row=0, column=2, sticky="nsew", padx=1, pady=1)
+
+        self.label_last_line = Label(window, text="Line: 1", 
+                            borderwidth=0, width=10, bg = "black", fg = "white")
+        self.label_last_line.grid(row=1, column=0, sticky="nsew", padx=1, pady=1)
+
+        execute = Button(window, text='>',
+                                   command=self.update_line_debugg)
+        execute.grid(row=1, column=1, sticky="nsew", padx=1, pady=1)
+
+        self.count = Label(window, text="Line: 0", 
+                            borderwidth=0, width=10, bg = "black", fg = "white")
+        self.count.grid(row=1, column=2, sticky="nsew", padx=1, pady=1)
+
+        window.grid_columnconfigure(0, weight=1)
+        window.grid_columnconfigure(1, weight=1)
+        window.grid_columnconfigure(2, weight=1)
+        window.resizable(width=True, height=False)
+
     def execute_current_tab_lef(self):
         selectedTab = self.tabs.index("current")
         currentTextArea = self.tabs.winfo_children()[selectedTab+1].textarea
@@ -239,7 +322,6 @@ class App:
         currentTextArea.edit_redo()   
 
     def newFile(self):
-        selectedTab = self.tabs.index("current")
         lastindex = self.tabs.index("end")-1
 
         textarea = Editor(self.tabs)
