@@ -90,7 +90,7 @@ class App:
         # help menu
         helpmenu = Menu(menubar, tearoff=0)
         helpmenu.add_command(label="Help", command=self.donothing)
-        helpmenu.add_command(label="About...", command=self.donothing)
+        helpmenu.add_command(label="About...", command=self.show_info)
         
 
         # setting menu
@@ -182,6 +182,16 @@ class App:
     def show_ast(self):
         showAST()
 
+    def show_info(self):
+        window = Toplevel()
+        window['bg'] = 'black'
+
+        grammar = Message(window)
+        grammar['fg'] = 'white'
+        grammar['bg'] = 'black'
+        grammar['text'] = 'Augus code by Engr. Espino\nTitus 1.46.13a Developed by @danii_mor\n 201314810'
+        grammar.pack(side='left')
+
     def update_line_debugg(self, event= None):
         self.count["text"] = "Line: %s" % str(self.c+1)
 
@@ -193,7 +203,7 @@ class App:
         # start execute line by self.c counter
         ply_left = left.parse()
         if self.c < len(lines):
-            if "main" not in lines[self.c]:
+            if "main:" not in lines[self.c]:
                 line = "main:" + lines[self.c]
                 result  = ply_left(left, line)
                 if result:
@@ -203,32 +213,54 @@ class App:
                     ast.root = result[0]
 
                     if self.__sym_table != None:
-                        self.__sym_table.setTable( {**self.__sym_table.printTable(), **result[1].printTable()} )
+                        new_table =  {**self.__sym_table.printTable(), **result[1].printTable()}
+                        for sym_id in new_table:
+                            sym = new_table[sym_id]
+                            if sym != None:
+                                if sym.getValue() == None:
+                                    try:
+                                        new_table[sym_id] = self.__sym_table.printTable()[sym_id]
+                                    except:
+                                        pass
+                        self.__sym_table.setTable({**self.__sym_table.printTable(), **new_table})
                     else:
                         self.__sym_table = result[1]
 
-                    goto_called = True
-                    start_from = "MAIN"
                     compute = [None, None]
-                    while goto_called:
-                        goto_called = False
-                        self.__sym_table.terminal = self.terminal
-                        compute = ast.start_execute(self.__sym_table, start_from)
-                        # lookup the last line
-                        index = self.terminal.search(r'\n', "insert", backwards=True, regexp=True)
-                        txt = self.terminal.get(str(index),'end-1c')
-                        if txt == "":
-                            index ="1.0"
-                        else:
-                            index = self.terminal.index("%s+1c" % index)
-                        if compute[0]:
-                            self.terminal.insert(str(float(index)+1), compute[0])
-                            self.__sym_table.cleanLog()
-                        if compute[1]:
-                            goto_called = True
-                            start_from = compute[1]
 
-            
+                    # start execute
+                    self.__sym_table.terminal = self.terminal
+                    compute = ast.start_execute(self.__sym_table, "MAIN")
+                    # lookup the last line
+                    index = self.terminal.search(r'\n', "insert", backwards=True, regexp=True)
+                    txt = self.terminal.get(str(index),'end-1c')
+                    if txt == "":
+                        index ="1.0"
+                    else:
+                        index = self.terminal.index("%s+1c" % index)
+                    if compute[0]:
+                        self.terminal.insert(str(float(index)+1), compute[0])
+                        self.__sym_table.cleanLog()
+                    if compute[1]:
+                        goto_line = 0
+                        for l in lines:
+                            if (compute[1]+":") in l:
+                                break
+                            goto_line = goto_line + 1
+                        
+                        self.c = goto_line - 1
+
+            if self.__sym_table != None:
+                if self.__sym_table.error != '':
+                    # lookup the last line
+                    index = self.terminal.search(r'\n', "insert", backwards=True, regexp=True)
+                    txt = self.terminal.get(str(index),'end-1c')
+                    if txt == "":
+                        index ="1.0"
+                    else:
+                        index = self.terminal.index("%s+1c" % index)
+                    self.terminal.insert(str(float(index)+1), "\nTitus>> Error Report Generated\n")
+
             self.c = self.c + 1
             self.label_last_line["text"] = "Line: %s" % str(self.c+1)
 
@@ -278,6 +310,7 @@ class App:
             self.__ast.root = result[0]
             self.__ast.graph()
             self.__sym_table = result[1]
+            self.__sym_table.error != ''
             goto_called = True
             start_from = "MAIN"
             compute = [None, None]
@@ -298,6 +331,16 @@ class App:
                 if compute[1]:
                     goto_called = True
                     start_from = compute[1]
+            
+            if self.__sym_table.error != '':
+                # lookup the last line
+                index = self.terminal.search(r'\n', "insert", backwards=True, regexp=True)
+                txt = self.terminal.get(str(index),'end-1c')
+                if txt == "":
+                    index ="1.0"
+                else:
+                    index = self.terminal.index("%s+1c" % index)
+                self.terminal.insert(str(float(index)+1), "\nTitus>> Error Report Generated\n")
     
     def execute_command(self, event):
         # lookup the last line
@@ -310,16 +353,6 @@ class App:
         input = self.terminal.get(index,'end-1c')
         # send the input to the calculate 
         self.__sym_table.read_input.set(input)
-        
-    def undo(self, event=None):
-        selectedTab = self.tabs.index("current")
-        currentTextArea = self.tabs.winfo_children()[selectedTab+1].textarea
-        currentTextArea.edit_undo()
-        
-    def redo(self, event=None):
-        selectedTab = self.tabs.index("current")
-        currentTextArea = self.tabs.winfo_children()[selectedTab+1].textarea
-        currentTextArea.edit_redo()   
 
     def newFile(self):
         lastindex = self.tabs.index("end")-1
@@ -354,24 +387,22 @@ class App:
             return True
 
     def file_open(self, event=None, filepath=None):
-        result = self.save_if_modified()
-        if result != None: #None => Aborted or Save cancelled, False => Discarded, True = Saved or Not modified
-            if filepath == None:
-                filepath = filedialog.askopenfilename()
-            if filepath != None  and filepath != '':
-                with open(filepath, encoding="utf-8") as f:
-                    fileContents = f.read()# Get all the text from file.           
-                # Set current text to a new Tab file contents
-                lastindex = self.tabs.index("end")-1
+        if filepath == None:
+            filepath = filedialog.askopenfilename()
+        if filepath != None  and filepath != '':
+            with open(filepath, encoding="utf-8") as f:
+                fileContents = f.read()# Get all the text from file.           
+            # Set current text to a new Tab file contents
+            lastindex = self.tabs.index("end")-1
 
-                textarea = Editor(self.tabs)
-                self.tabs.insert(lastindex, textarea, text="Tab" + str(lastindex+1))
-                self.tabs.select(lastindex)
+            textarea = Editor(self.tabs)
+            self.tabs.insert(lastindex, textarea, text="Tab" + str(lastindex+1))
+            self.tabs.select(lastindex)
 
-                textarea.textarea.insert(1.0, fileContents)
-                textarea.textarea.edit_modified(False)
-                tab_tittle = os.path.basename(filepath)
-                self.tabs.tab(lastindex, text = tab_tittle)
+            textarea.textarea.insert(1.0, fileContents)
+            textarea.textarea.edit_modified(False)
+            tab_tittle = os.path.basename(filepath)
+            self.tabs.tab(lastindex, text = tab_tittle)
 
     def file_save(self, event=None):
         selectedTab = self.tabs.index("current")
