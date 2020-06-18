@@ -143,7 +143,9 @@ def parse():
         t.lexer.lineno += t.value.count("\n")
 
     def t_error(t):
-        print("Illegal character '%s'" % t.value[0])
+        global sym_table
+        global __text
+        sym_table.error += "Lexical error <" + str(t.value[0]) + "> at line:" + str(t.lineno) + ", column:" + str(find_column(__text, t)) + "\n"
         t.lexer.skip(1)
 
     def find_column(input, token):
